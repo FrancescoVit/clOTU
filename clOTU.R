@@ -80,6 +80,12 @@ clOTU <- function(phyloseq.obj, biom.file, mapping.file, tax.level, category, to
     mw=max.word
   }
   
+  # Here the data for plotting are constructed and stored in "vec" vector. 
+  # The for cycle iterate each row of j dataframe, and add to the vector "vec" n repeat of word x,
+  # where n is the number of observation of the taxon (or OTU), taken from column 1 of j dataframe, 
+  # and x is the name of the taxon (i.e. the name of the calss, or phylum, depending on tax.level variable)
+  # taken from column 2 of j dataframe
+   
   vec = NULL
   for (i in 1:nrow(j))  {
     count <- as.vector(j[i,1])
