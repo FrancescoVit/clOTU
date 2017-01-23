@@ -21,9 +21,12 @@
 #### to.plot = item to be plotted. It must indicate the column of the otu table to be plotted (i.e. the sample); 
 #### can be a number, indicating the number of column, or can be the name of the column.  Can be "OTU" to obtain 
 #### a word cloud with otu name
+#### word.range (optional)_= a vector of lenght 2 indicating maximum and minimum values for the ranges of the size of the 
+#### words. Useful when the error similar to "In wordcloud(vec, scale = c(4, 0.4), max.words = mw, random.order = FALSE, 
+#### : enterobacteriales could not be fit on page. It will not be plotted.""
 
 
-clOTU <- function(phyloseq.obj, biom.file, mapping.file, tax.level, category, to.plot, max.word) {
+clOTU <- function(phyloseq.obj, biom.file, mapping.file, tax.level, category, to.plot, max.word, word.range) {
   
   #loading required packages
   require(phyloseq)
@@ -33,6 +36,17 @@ clOTU <- function(phyloseq.obj, biom.file, mapping.file, tax.level, category, to
   require(tm)
   require(NLP)
   
+  #setting default values for variables, or reading optional value supplied
+  if (missing(max.word)) { 
+    mw = 500
+  } else {
+    mw=max.word
+  }
+  if (missing(word.range)) { 
+    w.range <- c(4,0.4)
+  } else {
+    w.range <- word.range
+  }
   #Reading in the biom table, the mapping file and creating a phyloseq object.
   if (missing(phyloseq.obj))  {
     biom.file <- import_biom(BIOMfilename=biom.file)
@@ -58,8 +72,7 @@ clOTU <- function(phyloseq.obj, biom.file, mapping.file, tax.level, category, to
       #extracting OTU table and taxon table
       otus <- as.data.frame(otu_table(choosen_tax))
       taxon <- as.data.frame(tax_table(choosen_tax))
-      
-    } else {  
+     } else {  
       #Using phylose agglomerate function to agglomerate samples on a category in mapping file
       agglom_sample <- merge_samples(x = phyloseq_obj, group = as.character(category))
       #Using phyloseq agglomerate function to agglomerate OTU table at the chosen phylogenetic rank
@@ -68,34 +81,24 @@ clOTU <- function(phyloseq.obj, biom.file, mapping.file, tax.level, category, to
       otus <- as.data.frame(t(otu_table(choosen_tax)))
       taxon <- as.data.frame(tax_table(choosen_tax))
     }
-    
     #Extracting otus and taxonomy information for the plot 
     j <- data.frame(otus[to.plot],taxon[tax.level])
     colnames(j) <- c("Counts","Tax_lvl")
   } 
-  
-  if (missing(max.word)) { 
-    mw = 500
-  } else {
-    mw=max.word
-  }
   
   # Here the data for plotting are constructed and stored in "vec" vector. 
   # The for cycle iterate each row of j dataframe, and add to the vector "vec" n repeat of word x,
   # where n is the number of observation of the taxon (or OTU), taken from column 1 of j dataframe, 
   # and x is the name of the taxon (i.e. the name of the calss, or phylum, depending on tax.level variable)
   # taken from column 2 of j dataframe
-   
   vec = NULL
   for (i in 1:nrow(j))  {
     count <- as.vector(j[i,1])
     word <- as.vector(j[i,2])
     vec <- c(vec, rep(word,count))
   }
-  
   # remove inizial string of taxonomy (i.e. p__ or c__ and so on)
   vec <- gsub("^.__","",vec)
-  
   # building legend components
   fact <- as.factor(vec)
   freq_per_level <- count(fact)
@@ -103,7 +106,6 @@ clOTU <- function(phyloseq.obj, biom.file, mapping.file, tax.level, category, to
   max_legend <- max(freq_per_level$freq)
   min_legend <- min(freq_per_level$freq)
   median_legend <- median(freq_per_level$freq)
-  
   #plot
   #setting background color and removing margins
   par(bg="grey90",mar=c(0,0,0,0), par(oma=c(0,0,0,0)))
@@ -113,7 +115,8 @@ clOTU <- function(phyloseq.obj, biom.file, mapping.file, tax.level, category, to
   split.screen(matrix(c(0,0.85,0.85,1,0,0,1,1), ncol=4), screen = 2)
   #plot the cloud
   screen(3)
-  wordcloud(vec, scale=c(4,0.4), max.words=mw, random.order=FALSE, random.color=FALSE, rot.per=0, use.r.layout=FALSE, colors=brewer.pal(11, "RdYlGn"))
+  #read in and set the settings for word.range
+  wordcloud(vec, scale=w.range, max.words=mw, random.order=FALSE, random.color=FALSE, rot.per=0, use.r.layout=FALSE, colors=brewer.pal(11, "RdYlGn"))
   #add text reference to taxonomic level, sample
   screen(1)
   text(x = 0.2, y = 0.2 , paste("Taxonomic level:", tax.level), cex = 0.7, font=3)
